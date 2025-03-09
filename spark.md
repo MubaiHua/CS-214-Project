@@ -17,6 +17,7 @@ Make sure the data has been loaded successfully
 
 Running a Spark Shell
 `docker exec -it spark-master /bin/bash`
+`spark-shell`
 
 Run the following command to execute a simple query
 ```

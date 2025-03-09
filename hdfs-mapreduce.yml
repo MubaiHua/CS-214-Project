@@ -1,0 +1,67 @@
+version: '3.8'
+services:
+  primarynode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop2.7.4-java8
+    container_name: primarynode
+    hostname: primarynode
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+    ports:
+      - "9870:9870"      # HDFS NameNode web UI
+      - "8020:8020"      # HDFS NameNode RPC
+    environment:
+      - CLUSTER_NAME=demo
+      - CORE_CONF_fs_defaultFS=hdfs://primarynode:8020
+      - DFS_NAMENODE_HTTP_ADDRESS=primarynode:9870
+      - YARN_RESOURCEMANAGER_HOST=resourcemanager
+    networks:
+      - hadoop
+
+  storagenode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop2.7.4-java8
+    container_name: storagenode
+    hostname: storagenode
+    volumes:
+      - hadoop_datanode:/hadoop/dfs/data
+    ports:
+      - "9864:9864"      # HDFS DataNode web UI
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://primarynode:8020
+    networks:
+      - hadoop
+    depends_on:
+      - primarynode
+
+  resourcemanager:
+    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop2.7.4-java8
+    container_name: resourcemanager
+    hostname: resourcemanager
+    ports:
+      - "8088:8088"  # YARN ResourceManager UI
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://primarynode:8020
+      - YARN_RESOURCEMANAGER_HOST=resourcemanager
+    networks:
+      - hadoop
+    depends_on:
+      - primarynode
+
+  nodemanager:
+    image: bde2020/hadoop-nodemanager:2.0.0-hadoop2.7.4-java8
+    container_name: nodemanager
+    hostname: nodemanager
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://primarynode:8020
+      - YARN_RESOURCEMANAGER_HOST=resourcemanager
+    networks:
+      - hadoop
+    depends_on:
+      - resourcemanager
+
+volumes:
+  hadoop_namenode:
+  hadoop_datanode:
+
+networks:
+  hadoop:
+    driver: bridge
