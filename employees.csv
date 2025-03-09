@@ -1,3 +1,11 @@
-1,John Doe,30,Engineer
-2,Jane Smith,28,Analyst
-3,Bob Johnson,35,Manager
+id,name,city,country,age,salary,department
+1,John,New York,USA,30,6000,Sales
+2,Jane,London,UK,28,5000,Marketing
+3,Bob,Toronto,Canada,40,7000,Sales
+4,Alice,San Francisco,USA,35,8000,Engineering
+5,Mark,Tokyo,Japan,42,7500,Marketing
+6,Linda,Berlin,Germany,29,6500,Engineering
+7,Charlie,Paris,France,38,7200,Marketing
+8,George,Sydney,Australia,45,8300,Sales
+9,Susan,New Delhi,India,31,5000,Engineering
+10,Tim,New York,USA,41,8800,Sales

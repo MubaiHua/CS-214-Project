@@ -1,0 +1,114 @@
+version: "3.8"
+services:
+  # HDFS NameNode: Manages HDFS namespace and metadata.
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop2.7.4-java8
+    container_name: namenode
+    environment:
+      - CLUSTER_NAME=test
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+    ports:
+      - "50070:50070"   # HDFS Web UI
+      - "9000:9000"     # HDFS RPC
+    volumes:
+      - namenode-data:/hadoop/dfs/name
+
+  # HDFS DataNode: Stores actual HDFS file blocks.
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop2.7.4-java8
+    container_name: datanode
+    environment:
+      - CLUSTER_NAME=test
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+    depends_on:
+      - namenode
+    volumes:
+      - datanode-data:/hadoop/dfs/data
+
+  # YARN ResourceManager: Schedules applications and manages cluster resources.
+  resourcemanager:
+    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop2.7.4-java8
+    container_name: resourcemanager
+    environment:
+      - YARN_CONF_yarn_resourcemanager_hostname=resourcemanager
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+    depends_on:
+      - namenode
+    ports:
+      - "8088:8088"   # ResourceManager Web UI
+
+  # YARN NodeManager: Runs tasks on worker nodes. Advertises available memory and CPU.
+  nodemanager:
+    image: bde2020/hadoop-nodemanager:2.0.0-hadoop2.7.4-java8
+    container_name: nodemanager
+    environment:
+      - YARN_CONF_yarn_resourcemanager_hostname=resourcemanager
+      - YARN_CONF_yarn_nodemanager_resource_memory___mb=8192
+      - YARN_CONF_yarn_nodemanager_resource_cpu___vcores=4
+    depends_on:
+      - resourcemanager
+
+  # Spark Client: Used to submit Spark jobs in YARN mode.
+  spark-client:
+    image: bde2020/spark-master:2.4.0-hadoop2.7
+    container_name: spark-client
+    environment:
+      # Set mode to client (so no dedicated Spark master process is launched)
+      - SPARK_MODE=client
+      # Make sure Hadoop configurations are available to Spark
+      - HADOOP_CONF_DIR=/etc/hadoop
+      # Define SPARK_HOME and update PATH to include Spark binaries
+      - SPARK_HOME=/spark
+      - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/spark/bin
+      - YARN_CONF_yarn_resourcemanager_hostname=resourcemanager
+    depends_on:
+      - namenode
+      - resourcemanager
+    tty: true
+    stdin_open: true
+
+  # Hive Metastore: PostgreSQL container to serve as Hive’s metadata store.
+  hive-metastore:
+    image: postgres:9.6
+    container_name: hive-metastore
+    environment:
+      - POSTGRES_USER=hive
+      - POSTGRES_PASSWORD=hive
+      - POSTGRES_DB=hive
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Hive Server2: Provides the Hive query interface (clients use Beeline to connect).
+  hive-server:
+    image: bde2020/hive:2.3.2-postgresql-metastore
+    container_name: hive-server
+    environment:
+      - HIVE_METASTORE_HOST=hive-metastore
+      - HIVE_METASTORE_USER=hive
+      - HIVE_METASTORE_PASSWORD=hive
+      - HIVE_METASTORE_DB=hive
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+    ports:
+      - "10000:10000"  # HiveServer2 port
+    depends_on:
+      - namenode
+      - hive-metastore
+
+  # Hadoop Client: Provides the Hadoop CLI to run standalone MapReduce jobs.
+  hadoop-client:
+    image: bde2020/hadoop-base:2.0.0-hadoop2.7.4-java8
+    container_name: hadoop-client
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+    depends_on:
+      - namenode
+      - resourcemanager
+    command: tail -f /dev/null
+    tty: true
+    stdin_open: true
+
+
+volumes:
+  namenode-data:
+  datanode-data:
+  pgdata:
